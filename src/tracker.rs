@@ -10,6 +10,7 @@ use super::Result;
 pub struct Tracker {
   pub name: String,
   pub url: Url,
+  pub match_pattern: String,
 }
 
 #[derive(Default, Debug)]
@@ -68,12 +69,13 @@ impl SearchMatch {
 }
 
 impl Tracker {
-  pub fn new(name: &str, url: &str) -> Result<Self> {
+  pub fn new(name: &str, url: &str, match_pattern: &str) -> Result<Self> {
     let url = url.trim_end_matches(&['/']);
     let url = Url::from_str(url)?;
     Ok(Tracker {
       name: name.into(),
       url,
+      match_pattern: match_pattern.into(),
     })
   }
   pub fn search_url(&self, param: &str) -> Result<Url> {
@@ -98,49 +100,41 @@ impl Tracker {
     Ok(())
   }
 
-  pub async fn search(
-    &self,
-    param: &str,
-    match_list: &str,
-    match_url: &str,
-    limit: usize,
-  ) -> Result<Vec<SearchMatch>> {
+  pub async fn search(&self, param: &str, limit: usize) -> Result<Vec<SearchMatch>> {
     let resp = reqwest::get(self.search_url(param)?).await?;
     let body = resp.text().await?;
     let doc = Html::parse_fragment(&body);
-    let table_selector = Selector::parse(match_list).unwrap();
+    let table_selector = Selector::parse(&self.match_pattern).unwrap();
     let table = doc.select(&table_selector);
-
-    let href_selector = Selector::parse(match_url).unwrap();
 
     let mut search_match_vec = vec![];
 
     // FIXME: when the limit is 98, here iteration only return counts of 49
     // when the limit is 100000 (bigger than the element total count), here will return 98(which is the correct count).j
-    for e in table.take(limit) {
-      if let Some(content) = e.select(&href_selector).next() {
-        let mut match_result_builder = SearchMatchBuilder::default();
+    for content in table.take(limit) {
+      // if let Some(content) = e.select(&href_selector).next() {
+      let mut match_result_builder = SearchMatchBuilder::default();
 
-        let link = content
-          .value()
-          .attr("href")
-          .map_or(Err("no found href"), Ok)?;
-        match_result_builder.url(&self.url, link)?;
+      let link = content
+        .value()
+        .attr("href")
+        .map_or(Err("no found href"), Ok)?;
+      match_result_builder.url(&self.url, link)?;
 
-        let mut content = fix_content(content.text().collect::<Vec<_>>());
-        let name = content.drain(..1).collect::<Vec<String>>();
-        let name = name.first().map_or(Err("match href is none"), Ok)?;
-        match_result_builder.name(name);
+      let mut content = fix_content(content.text().collect::<Vec<_>>());
+      let name = content.drain(..1).collect::<Vec<String>>();
+      let name = name.first().map_or(Err("match href is none"), Ok)?;
+      match_result_builder.name(name);
 
-        let info = if content.is_empty() {
-          None
-        } else {
-          Some(content.join(" "))
-        };
-        match_result_builder.info(info);
+      let info = if content.is_empty() {
+        None
+      } else {
+        Some(content.join(" "))
+      };
+      match_result_builder.info(info);
 
-        search_match_vec.push(match_result_builder.build()?);
-      }
+      search_match_vec.push(match_result_builder.build()?);
+      // }
     }
     Ok(search_match_vec)
   }
