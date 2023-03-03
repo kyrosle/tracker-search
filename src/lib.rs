@@ -1,8 +1,12 @@
 use std::{error::Error, fs, io::Write};
 
+pub mod metainfo;
 pub mod tracker;
+pub mod matcher;
+pub mod unit;
+pub mod error;
 
-pub type Result<T> = std::result::Result<T, Box<dyn Error>>;
+pub use error::*;
 
 pub fn fix_content(title: Vec<&str>) -> Vec<String> {
   title

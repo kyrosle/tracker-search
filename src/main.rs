@@ -1,3 +1,4 @@
+use tracker_search::matcher::MatchPatternsBuilder;
 use tracker_search::tracker::Tracker;
 use tracker_search::Result;
 
@@ -6,6 +7,8 @@ async fn main() -> Result<()> {
   let param = "apex";
   let match_list = "table tbody tr td a";
   let url = r#"https://0mag.net"#;
+
+  let matcher = MatchPatternsBuilder::new();
 
   let tracker = Tracker::new("0magnet", url, match_list)?;
 
