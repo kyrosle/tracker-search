@@ -1,54 +1,53 @@
-use crate::{matcher::MatchMetaPatternsBuilderError, metainfo::TorrentMetaInfoBuilderError};
+use crate::metainfo::TorrentMetaInfoBuilderError;
 use thiserror::Error;
 
-pub type Result<T> = std::result::Result<T, Error<'static>>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Error)]
-pub enum Error<'a> {
-  #[error("{0}")]
-  MatchPatternsError(MatchMetaPatternsBuilderError),
-
+pub enum Error {
   #[error("{0}")]
   UrlParseError(url::ParseError),
 
   #[error("{0}")]
   ReqwestError(reqwest::Error),
 
-  #[error("{0}")]
-  SelectorParseError(scraper::error::SelectorErrorKind<'a>),
+  #[error("Selector Parse Error")]
+  SelectorParseError,
   #[error("{0}")]
   SelectorElementError(String),
 
   #[error("{0}")]
   TorrentMetaInfoBuildError(TorrentMetaInfoBuilderError),
+  #[error("{0}")]
+  TorrentMetaInfoSettingError(String),
+
+  #[error("{0}")]
+  OtherError(String),
+
+  #[error("{0}")]
+  ParseStorageSizeError(String),
 }
 
-impl<'a> From<MatchMetaPatternsBuilderError> for Error<'a> {
-  fn from(value: MatchMetaPatternsBuilderError) -> Self {
-    Self::MatchPatternsError(value)
-  }
-}
-
-impl<'a> From<reqwest::Error> for Error<'a> {
+impl From<reqwest::Error> for Error {
   fn from(value: reqwest::Error) -> Self {
     Self::ReqwestError(value)
   }
 }
 
-impl<'a> From<url::ParseError> for Error<'a> {
+impl From<url::ParseError> for Error {
   fn from(value: url::ParseError) -> Self {
     Self::UrlParseError(value)
   }
 }
 
-impl<'a> From<TorrentMetaInfoBuilderError> for Error<'a> {
+impl From<TorrentMetaInfoBuilderError> for Error {
   fn from(value: TorrentMetaInfoBuilderError) -> Self {
     Self::TorrentMetaInfoBuildError(value)
   }
 }
 
-impl<'a> From<scraper::error::SelectorErrorKind<'a>> for Error<'a> {
-  fn from(value: scraper::error::SelectorErrorKind<'a>) -> Self {
-    Self::SelectorParseError(value)
+impl From<scraper::error::SelectorErrorKind<'_>> for Error {
+  fn from(_: scraper::error::SelectorErrorKind<'_>) -> Self {
+    Self::SelectorParseError
   }
 }
